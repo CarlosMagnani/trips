@@ -1,73 +1,71 @@
-# React + TypeScript + Vite
+# Trips
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Personal travel toolkit: a mobile-first React PWA for BRL/ARS currency conversion, places sorted by distance, and budget notes. Local-first, offline-friendly, no accounts or backend.
 
-Currently, two official plugins are available:
+## Quick Start
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Commands
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- `npm run dev` - Start development server
+- `npm run build` - Typecheck and build for production
+- `npm run preview` - Preview production build
+- `npm run test` - Run tests
+- `npm run test:watch` - Run tests in watch mode
+- `npm run typecheck` - TypeScript type checking
+- `npm run lint` - ESLint
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## Documentation
+
+**Start here:**
+
+- [CONTEXT.md](./CONTEXT.md) - Project context, domain terms, and product boundaries
+- [Spec-First Workflow](./docs/spec-first-workflow.md) - How to write specs before code
+
+**Foundation:**
+
+- [Project Foundation Spec](./docs/trips-pwa-project-foundation.md) - MVP product spec, architecture, and data models
+
+**Task Specs:**
+
+- [docs/specs/](./docs/specs/) - Implementation-ready specs for features and changes
+
+**Architecture Decisions:**
+
+- [docs/adr/](./docs/adr/) - Records for hard-to-reverse decisions
+
+## Stack
+
+- React 19 + TypeScript 6
+- Vite 8
+- React Router 7
+- Tailwind CSS 4
+- shadcn/ui-style primitives
+- Vitest
+- vite-plugin-pwa
+
+## Routes
+
+- `/` - Home with gadget cards
+- `/converter` - BRL to ARS currency converter
+- `/places` - Places sorted by distance
+- `/budget` - Budget and transaction notes
+
+## MVP Scope
+
+- Personal single-user app
+- Local device storage only (localStorage)
+- Frontend-only, no backend or API
+- Manual exchange rates (no live rates)
+- Manual place entry (no maps or geolocation)
+- BRL and ARS currencies only
+- Offline shell after first visit
+- No auth, no cloud sync, no push notifications
+
+## License
+
+Private project.
