@@ -168,7 +168,14 @@ describe("getItineraryHint", () => {
     })
 
     afterAll(() => {
-      process.env.TZ = originalTz
+      // `process.env.TZ = undefined` stringifies to "undefined" in Node,
+      // which would leave subsequent tests in this worker running under
+      // an invalid timezone. Use `delete` to restore the "unset" state.
+      if (originalTz === undefined) {
+        delete process.env.TZ
+      } else {
+        process.env.TZ = originalTz
+      }
     })
 
     it("uses the local calendar date, not the UTC date, for the day comparison", () => {
