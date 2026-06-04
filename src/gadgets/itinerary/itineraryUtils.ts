@@ -52,7 +52,7 @@ export function getItineraryHint(trip: Trip | null, today: Date = new Date()): s
 function resolveCurrentDayIndex(trip: Trip, today: Date): number {
   if (trip.days.length === 0) return 0
 
-  const todayIso = today.toISOString().split("T")[0]
+  const todayIso = toLocalIsoDate(today)
   const matchingIndex = trip.days.findIndex((day) => day.date === todayIso)
   if (matchingIndex !== -1) return matchingIndex
 
@@ -61,4 +61,15 @@ function resolveCurrentDayIndex(trip: Trip, today: Date): number {
 
   // Today is after the trip: show the last day
   return trip.days.length - 1
+}
+
+// Build a YYYY-MM-DD string from the *local* date parts of `d`.
+// `Date#toISOString()` always emits UTC, which would shift the date in
+// UTC-negative time zones during the local evening. Trip dates are
+// stored as local-calendar dates, so the comparison must use local parts.
+function toLocalIsoDate(d: Date): string {
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, "0")
+  const day = String(d.getDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
 }

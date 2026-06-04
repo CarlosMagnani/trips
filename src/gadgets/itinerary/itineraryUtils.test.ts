@@ -1,4 +1,5 @@
-import { describe, it, expect } from "vitest"
+/// <reference types="node" />
+import { describe, it, expect, beforeAll, afterAll } from "vitest"
 import {
   isValidDateRange,
   generateDays,
@@ -83,7 +84,7 @@ describe("formatDayLabel", () => {
 
 describe("getItineraryHint", () => {
   it('returns "No trip planned" hint when trip is null', () => {
-    expect(getItineraryHint(null, new Date("2024-06-15"))).toBe(
+    expect(getItineraryHint(null, localDate(2024, 6, 15))).toBe(
       "No trip planned — tap to start"
     )
   })
@@ -102,7 +103,7 @@ describe("getItineraryHint", () => {
         makeDay("2024-06-07", "driving", 0),
       ],
     })
-    expect(getItineraryHint(trip, new Date("2024-06-03"))).toBe(
+    expect(getItineraryHint(trip, localDate(2024, 6, 3))).toBe(
       "Day 3 of 7, 4 stops, Walking"
     )
   })
@@ -117,7 +118,7 @@ describe("getItineraryHint", () => {
         makeDay("2024-06-12", "driving", 1),
       ],
     })
-    expect(getItineraryHint(trip, new Date("2024-06-01"))).toBe(
+    expect(getItineraryHint(trip, localDate(2024, 6, 1))).toBe(
       "Day 1 of 3, 3 stops, Driving"
     )
   })
@@ -132,7 +133,7 @@ describe("getItineraryHint", () => {
         makeDay("2024-06-12", "driving", 2),
       ],
     })
-    expect(getItineraryHint(trip, new Date("2024-07-01"))).toBe(
+    expect(getItineraryHint(trip, localDate(2024, 7, 1))).toBe(
       "Day 3 of 3, 2 stops, Driving"
     )
   })
@@ -143,7 +144,7 @@ describe("getItineraryHint", () => {
       endDate: "2024-06-10",
       days: [makeDay("2024-06-10", "walking", 1)],
     })
-    expect(getItineraryHint(trip, new Date("2024-06-10"))).toBe(
+    expect(getItineraryHint(trip, localDate(2024, 6, 10))).toBe(
       "Day 1 of 1, 1 stop, Walking"
     )
   })
@@ -154,11 +155,52 @@ describe("getItineraryHint", () => {
       endDate: "2024-06-10",
       days: [makeDay("2024-06-10", "walking", 0)],
     })
-    expect(getItineraryHint(trip, new Date("2024-06-10"))).toBe(
+    expect(getItineraryHint(trip, localDate(2024, 6, 10))).toBe(
       "Day 1 of 1, 0 stops, Walking"
     )
   })
+
+  describe("with a UTC-negative timezone (America/New_York)", () => {
+    const originalTz = process.env.TZ
+
+    beforeAll(() => {
+      process.env.TZ = "America/New_York"
+    })
+
+    afterAll(() => {
+      process.env.TZ = originalTz
+    })
+
+    it("uses the local calendar date, not the UTC date, for the day comparison", () => {
+      // 2024-06-11T02:00Z is 2024-06-10 22:00 in EDT (UTC-4).
+      // The trip runs Jun 8..12. In local time it is still June 10 (Day 3),
+      // but in UTC it is June 11 (Day 4). The hint must follow local time.
+      const localEveningOfJune10 = new Date("2024-06-11T02:00:00.000Z")
+      const trip = makeTrip({
+        startDate: "2024-06-08",
+        endDate: "2024-06-12",
+        days: [
+          makeDay("2024-06-08", "walking", 0),
+          makeDay("2024-06-09", "walking", 0),
+          makeDay("2024-06-10", "walking", 0),
+          makeDay("2024-06-11", "driving", 0),
+          makeDay("2024-06-12", "driving", 0),
+        ],
+      })
+      expect(getItineraryHint(trip, localEveningOfJune10)).toBe(
+        "Day 3 of 5, 0 stops, Walking"
+      )
+    })
+  })
 })
+
+// Build a Date at local midnight on the given calendar date. Using the
+// `Date(year, monthIndex, day)` constructor pins the local calendar date
+// regardless of the runtime timezone, so tests reflect the function's
+// contract: "use the local date of `today`".
+function localDate(year: number, month: number, day: number): Date {
+  return new Date(year, month - 1, day)
+}
 
 function makeDay(date: string, travelMode: TravelMode, stopCount: number) {
   return {
