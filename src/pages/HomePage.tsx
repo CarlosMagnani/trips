@@ -1,7 +1,8 @@
 import { Link } from "react-router-dom"
-import { ArrowLeftRight, MapPin, Receipt } from "lucide-react"
+import { ArrowLeftRight, Calendar, MapPin, Receipt } from "lucide-react"
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { readStorage } from "@/storage/localStore"
+import { getItineraryHint } from "@/gadgets/itinerary/itineraryUtils"
 
 const gadgets = [
   {
@@ -32,6 +33,16 @@ const gadgets = [
     hint: (data: ReturnType<typeof readStorage>) => {
       const count = data.transactions.length
       return count > 0 ? `${count} transaction${count === 1 ? "" : "s"}` : "No transactions yet"
+    },
+  },
+  {
+    to: "/itinerary",
+    label: "Itinerary",
+    description: "Plan your daily trip",
+    icon: Calendar,
+    hint: (data: ReturnType<typeof readStorage>) => {
+      const activeTrip = data.trips.find((t) => t.id === data.activeTripId) ?? null
+      return getItineraryHint(activeTrip)
     },
   },
 ]
