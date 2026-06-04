@@ -4,8 +4,7 @@ import { X } from "lucide-react"
 import {
   autocompletePlaces,
   getPlaceDetails,
-  getPhotoUrl,
-  type AutocompleteSuggestion,
+  type AutocompletePrediction,
 } from "./placesApi"
 import type { ItineraryStop } from "./itineraryTypes"
 
@@ -16,10 +15,11 @@ interface PlaceSearchProps {
 
 export function PlaceSearch({ onSelect, onClose }: PlaceSearchProps) {
   const [query, setQuery] = useState("")
-  const [suggestions, setSuggestions] = useState<AutocompleteSuggestion[]>([])
+  const [suggestions, setSuggestions] = useState<AutocompletePrediction[]>([])
   const [hasSearched, setHasSearched] = useState(false)
   const [isSelecting, setIsSelecting] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const requestIdRef = useRef(0)
 
   useEffect(() => {
     if (debounceRef.current) {
@@ -30,10 +30,14 @@ export function PlaceSearch({ onSelect, onClose }: PlaceSearchProps) {
       return
     }
 
+    const currentRequestId = ++requestIdRef.current
+
     debounceRef.current = setTimeout(async () => {
       const results = await autocompletePlaces(query)
-      setSuggestions(results)
-      setHasSearched(true)
+      if (currentRequestId === requestIdRef.current) {
+        setSuggestions(results)
+        setHasSearched(true)
+      }
     }, 300)
 
     return () => {
@@ -43,29 +47,31 @@ export function PlaceSearch({ onSelect, onClose }: PlaceSearchProps) {
     }
   }, [query])
 
-  async function handleSelect(suggestion: AutocompleteSuggestion) {
+  function handleQueryChange(value: string) {
+    setQuery(value)
+    if (value.length < 2) {
+      setSuggestions([])
+      setHasSearched(false)
+    }
+  }
+
+  async function handleSelect(prediction: AutocompletePrediction) {
     setIsSelecting(true)
     try {
-      const { placeId } = suggestion.placePrediction
-      const details = await getPlaceDetails(placeId)
-
-      const photoUrl =
-        details.photos && details.photos.length > 0
-          ? getPhotoUrl(details.photos[0].name)
-          : undefined
+      const details = await getPlaceDetails(prediction.placeId)
 
       onSelect({
-        placeId: details.id,
-        name: details.displayName.text,
+        placeId: details.placeId,
+        name: details.name,
         address: details.formattedAddress,
-        lat: details.location.latitude,
-        lng: details.location.longitude,
-        photoUrl,
+        lat: details.lat,
+        lng: details.lng,
+        photoUrl: details.photoUrl,
         rating: details.rating,
-        ratingCount: details.userRatingCount,
-        openNow: details.currentOpeningHours?.openNow,
-        openingHours: details.regularOpeningHours
-          ? { weekdayText: details.regularOpeningHours.weekdayDescriptions }
+        ratingCount: details.ratingCount,
+        openNow: details.openNow,
+        openingHours: details.weekdayText
+          ? { weekdayText: details.weekdayText }
           : undefined,
       })
     } finally {
@@ -79,7 +85,7 @@ export function PlaceSearch({ onSelect, onClose }: PlaceSearchProps) {
         <Input
           placeholder="Search places..."
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => handleQueryChange(e.target.value)}
           autoFocus
           disabled={isSelecting}
         />
@@ -101,17 +107,17 @@ export function PlaceSearch({ onSelect, onClose }: PlaceSearchProps) {
 
       {!isSelecting && suggestions.length > 0 && query.length >= 2 && (
         <ul className="border rounded-md bg-background divide-y max-h-60 overflow-y-auto">
-          {suggestions.map((suggestion) => (
-            <li key={suggestion.placePrediction.placeId}>
+          {suggestions.map((prediction) => (
+            <li key={prediction.placeId}>
               <button
                 className="w-full text-left px-3 py-2 hover:bg-accent transition-colors"
-                onClick={() => handleSelect(suggestion)}
+                onClick={() => handleSelect(prediction)}
               >
                 <span className="text-sm font-medium block">
-                  {suggestion.placePrediction.structuredFormat.mainText.text}
+                  {prediction.mainText}
                 </span>
                 <span className="text-xs text-muted-foreground block">
-                  {suggestion.placePrediction.structuredFormat.secondaryText.text}
+                  {prediction.secondaryText}
                 </span>
               </button>
             </li>
