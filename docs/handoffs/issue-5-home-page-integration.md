@@ -11,6 +11,7 @@ Branch: `issue-5` (2 commits, 4 files, +326 / -8)
 ### Commit history
 1. `ed48b50` — feat: home page itinerary card with dynamic summary hint (closes #5)
 2. `676c03c` — fix: use local calendar date for itinerary hint day comparison (Codex P2 review)
+3. `31d2029` — fix: properly restore TZ in afterAll when originally unset (test isolation)
 
 ## Files changed
 
@@ -97,5 +98,6 @@ Followed the red-green-refactor loop per the `tdd` skill, one test at a time:
 3. RED — before/after-trip resolution + singularisation + mode fallback (4 cases). GREEN: added `resolveCurrentDayIndex` private helper.
 4. RED — `HomePage` integration (6 cases: card render, hint text, navigation, view switching, all 4 gadgets, storage namespace sanity). GREEN: added the gadget to `gadgets[]`.
 5. **Post-review RED** — Codex P2 caught a timezone bug: `today.toISOString().split("T")[0]` returns UTC, not local. Added a regression test under `process.env.TZ = "America/New_York"` that constructs a `Date` whose UTC date is June 11 but local date is June 10, and asserts the hint shows the local day. **GREEN**: extracted a `toLocalIsoDate(d)` helper using `getFullYear/getMonth/getDate`. Also switched all existing tests to construct `today` via local-date parts (`new Date(year, monthIndex, day)`) so they are timezone-independent and reflect the function's contract.
+6. **Test isolation fix** — The `afterAll` hook was assigning `undefined` back to `process.env.TZ` when the original value was unset, which stringifies to `"undefined"` and corrupts the timezone for subsequent tests in the same worker. Fixed by using `delete process.env.TZ` when the original was unset, otherwise assigning the original value back.
 
 After all tests passed, removed an unnecessary `eslint-disable` line on the `makeTrip` helper since the cleaner `as Trip` cast sufficed.
