@@ -17,6 +17,7 @@ export interface ItineraryStop {
   rating?: number
   ratingCount?: number
   openingHours?: OpeningHours
+  openNow?: boolean
   userNote?: string
   arrivalTime?: string
   durationMinutes?: number
