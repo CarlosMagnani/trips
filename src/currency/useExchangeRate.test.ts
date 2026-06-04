@@ -51,6 +51,8 @@ describe("useExchangeRate", () => {
       ],
       places: [],
       transactions: [],
+      trips: [],
+      activeTripId: null,
     }
     localStorage.setItem(STORAGE_NAMESPACE, JSON.stringify(cachedRate))
 

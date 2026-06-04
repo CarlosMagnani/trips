@@ -4,6 +4,7 @@ import { HomePage } from "@/pages/HomePage"
 import { ConverterPage } from "@/pages/ConverterPage"
 import { PlacesPage } from "@/pages/PlacesPage"
 import { BudgetPage } from "@/pages/BudgetPage"
+import { ItineraryPage } from "@/pages/ItineraryPage"
 
 export function AppRoutes() {
   return (
@@ -13,6 +14,7 @@ export function AppRoutes() {
         <Route path="/converter" element={<ConverterPage />} />
         <Route path="/places" element={<PlacesPage />} />
         <Route path="/budget" element={<BudgetPage />} />
+        <Route path="/itinerary" element={<ItineraryPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
