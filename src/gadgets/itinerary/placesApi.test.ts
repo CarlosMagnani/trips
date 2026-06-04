@@ -6,33 +6,37 @@ vi.mock("@googlemaps/js-api-loader", () => ({
   importLibrary: vi.fn().mockResolvedValue(undefined),
 }))
 
-const mockGetPlacePredictions = vi.fn()
-const mockGetDetails = vi.fn()
+const mockFetchAutocompleteSuggestions = vi.fn()
+const mockFetchFields = vi.fn()
+const mockIsOpen = vi.fn()
 
-const mockAutocompleteService = {
-  getPlacePredictions: mockGetPlacePredictions,
-}
-
-const mockPlacesService = {
-  getDetails: mockGetDetails,
-}
+let mockPlaceState: Record<string, unknown> = {}
 
 beforeAll(() => {
   const g = globalThis as Record<string, unknown>
   g.google = {
     maps: {
       places: {
-        AutocompleteService: vi.fn(function () {
-          return mockAutocompleteService
-        }),
-        PlacesService: vi.fn(function () {
-          return mockPlacesService
-        }),
-        PlacesServiceStatus: {
-          OK: "OK",
-          NOT_FOUND: "NOT_FOUND",
-          ZERO_RESULTS: "ZERO_RESULTS",
+        AutocompleteSuggestion: {
+          fetchAutocompleteSuggestions: mockFetchAutocompleteSuggestions,
         },
+        Place: vi.fn(function (opts: { id: string }) {
+          const self = this as Record<string, unknown>
+          self.id = opts.id
+          self.displayName = undefined
+          self.formattedAddress = undefined
+          self.location = undefined
+          self.rating = undefined
+          self.userRatingCount = undefined
+          self.photos = undefined
+          self.regularOpeningHours = undefined
+          self.currentOpeningHours = undefined
+          self.fetchFields = async (request: { fields: string[] }) => {
+            await mockFetchFields(request)
+            Object.assign(self, mockPlaceState)
+          }
+          self.isOpen = mockIsOpen
+        }),
       },
     },
   }
@@ -40,27 +44,22 @@ beforeAll(() => {
 
 describe("autocompletePlaces", () => {
   beforeEach(() => {
-    mockGetPlacePredictions.mockReset()
+    mockFetchAutocompleteSuggestions.mockReset()
   })
 
   it("returns predictions from the Maps JS API", async () => {
-    mockGetPlacePredictions.mockImplementation(
-      (_request: unknown, callback: (predictions: unknown[], status: string) => void) => {
-        callback(
-          [
-            {
-              place_id: "ChIJ123",
-              description: "Colosseum, Rome, Italy",
-              structured_formatting: {
-                main_text: "Colosseum",
-                secondary_text: "Rome, Italy",
-              },
-            },
-          ],
-          "OK"
-        )
-      }
-    )
+    mockFetchAutocompleteSuggestions.mockResolvedValue({
+      suggestions: [
+        {
+          placePrediction: {
+            placeId: "ChIJ123",
+            text: { toString: () => "Colosseum, Rome, Italy" },
+            mainText: { toString: () => "Colosseum" },
+            secondaryText: { toString: () => "Rome, Italy" },
+          },
+        },
+      ],
+    })
 
     const results = await autocompletePlaces("Colos")
 
@@ -71,29 +70,24 @@ describe("autocompletePlaces", () => {
       mainText: "Colosseum",
       secondaryText: "Rome, Italy",
     })
-    expect(mockGetPlacePredictions).toHaveBeenCalledWith(
-      { input: "Colos" },
-      expect.any(Function)
-    )
+    expect(mockFetchAutocompleteSuggestions).toHaveBeenCalledWith({
+      input: "Colos",
+    })
   })
 
-  it("returns empty array when status is not OK", async () => {
-    mockGetPlacePredictions.mockImplementation(
-      (_request: unknown, callback: (predictions: null, status: string) => void) => {
-        callback(null, "ZERO_RESULTS")
-      }
-    )
+  it("returns empty array when suggestions is empty", async () => {
+    mockFetchAutocompleteSuggestions.mockResolvedValue({
+      suggestions: [],
+    })
 
     const results = await autocompletePlaces("xyznonexistent")
     expect(results).toEqual([])
   })
 
-  it("returns empty array when predictions is null", async () => {
-    mockGetPlacePredictions.mockImplementation(
-      (_request: unknown, callback: (predictions: null, status: string) => void) => {
-        callback(null, "OK")
-      }
-    )
+  it("returns empty array when suggestions is null", async () => {
+    mockFetchAutocompleteSuggestions.mockResolvedValue({
+      suggestions: null,
+    })
 
     const results = await autocompletePlaces("test")
     expect(results).toEqual([])
@@ -102,29 +96,24 @@ describe("autocompletePlaces", () => {
 
 describe("getPlaceDetails", () => {
   beforeEach(() => {
-    mockGetDetails.mockReset()
+    mockFetchFields.mockReset()
+    mockIsOpen.mockReset()
+    mockPlaceState = {}
   })
 
   it("returns flattened place details from the Maps JS API", async () => {
-    mockGetDetails.mockImplementation(
-      (_request: unknown, callback: (place: unknown, status: string) => void) => {
-        callback(
-          {
-            place_id: "ChIJ123",
-            name: "Colosseum",
-            formatted_address: "Piazza del Colosseo, 1, 00184 Roma RM, Italy",
-            geometry: {
-              location: { lat: () => 41.8902, lng: () => 12.4922 },
-            },
-            rating: 4.7,
-            user_ratings_total: 350000,
-            photos: [{ getUrl: (opts: { maxHeight: number }) => `https://maps.googleapis.com/maps/api/place/photo?maxheight=${opts.maxHeight}` }],
-            opening_hours: { open_now: true, weekday_text: ["Monday: 9:00 AM – 7:00 PM"] },
-          },
-          "OK"
-        )
-      }
-    )
+    mockPlaceState = {
+      displayName: "Colosseum",
+      formattedAddress: "Piazza del Colosseo, 1, 00184 Roma RM, Italy",
+      location: { lat: () => 41.8902, lng: () => 12.4922 },
+      rating: 4.7,
+      userRatingCount: 350000,
+      photos: [{ getURI: () => "https://maps.googleapis.com/maps/api/place/photo?maxheight=400" }],
+      regularOpeningHours: {
+        weekdayDescriptions: ["Monday: 9:00 AM – 7:00 PM"],
+      },
+    }
+    mockIsOpen.mockResolvedValue(true)
 
     const result = await getPlaceDetails("ChIJ123")
 
@@ -140,32 +129,19 @@ describe("getPlaceDetails", () => {
     expect(result.weekdayText).toEqual(["Monday: 9:00 AM – 7:00 PM"])
   })
 
-  it("rejects when status is not OK", async () => {
-    mockGetDetails.mockImplementation(
-      (_request: unknown, callback: (place: null, status: string) => void) => {
-        callback(null, "NOT_FOUND")
-      }
-    )
+  it("rejects when fetchFields throws", async () => {
+    mockFetchFields.mockRejectedValue(new Error("Places service error: NOT_FOUND"))
 
     await expect(getPlaceDetails("invalid")).rejects.toThrow("Places service error")
   })
 
   it("handles place with no photos", async () => {
-    mockGetDetails.mockImplementation(
-      (_request: unknown, callback: (place: unknown, status: string) => void) => {
-        callback(
-          {
-            place_id: "ChIJ456",
-            name: "Some Place",
-            formatted_address: "123 Main St",
-            geometry: {
-              location: { lat: () => 40.0, lng: () => -74.0 },
-            },
-          },
-          "OK"
-        )
-      }
-    )
+    mockPlaceState = {
+      displayName: "Some Place",
+      formattedAddress: "123 Main St",
+      location: { lat: () => 40.0, lng: () => -74.0 },
+    }
+    mockIsOpen.mockRejectedValue(new Error("no hours"))
 
     const result = await getPlaceDetails("ChIJ456")
 
