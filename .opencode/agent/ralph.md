@@ -1,7 +1,7 @@
 ---
 description: AFK agent that implements GitHub issues sequentially
 mode: primary
-model: opencode-go/minimax-m3
+model: opencode-go/qwen3.7-max
 permission:
   edit: allow
   bash: allow
